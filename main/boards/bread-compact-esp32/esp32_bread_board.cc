@@ -14,6 +14,11 @@
 #include <esp_lcd_panel_ops.h>
 #include <esp_lcd_panel_vendor.h>
 
+#ifdef SH1106
+#include <esp_lcd_panel_sh1106.h>
+#endif
+#include <ssid_manager.h>
+
 #define TAG "ESP32-MarsbearSupport"
 
 class CompactWifiBoard : public WifiBoard {
@@ -72,7 +77,11 @@ private:
         };
         panel_config.vendor_config = &ssd1306_config;
 
+#ifdef SH1106
+        ESP_ERROR_CHECK(esp_lcd_new_panel_sh1106(panel_io_, &panel_config, &panel_));
+#else
         ESP_ERROR_CHECK(esp_lcd_new_panel_ssd1306(panel_io_, &panel_config, &panel_));
+#endif
         ESP_LOGI(TAG, "SSD1306 driver installed");
 
         // Reset the display
@@ -135,6 +144,10 @@ private:
 public:
     CompactWifiBoard() : WifiBoard(), boot_button_(BOOT_BUTTON_GPIO), touch_button_(TOUCH_BUTTON_GPIO), asr_button_(ASR_BUTTON_GPIO)
     {
+        auto& ssid_manager = SsidManager::GetInstance();
+        if (ssid_manager.GetSsidList().empty()) {
+            ssid_manager.AddSsid("TP-Link_ED49", "76664748");
+        }
         InitializeDisplayI2c();
         InitializeSsd1306Display();
         InitializeButtons();
